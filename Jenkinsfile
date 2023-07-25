@@ -1,40 +1,56 @@
-def gv
+#!/usr/bin/env groovy
+
+library identifier: 'jenkins-shared-library@master', retriever: modernSCM(
+    [$class: 'GitSCMSource',
+    remote: 'https://github.com/oliseh6123/jenkins-shared-library.git'
+    credentialsId: 'github-credentials'
+    ]
+)
 
 pipeline {
     agent any
-    stages {
-        stage("init") {
+    tools {
+        maven 'Maven'
+    }
+    environment {
+        IMAGE_NAME = 'obiwan6123/demo-app:java-maven-2.0'
+    }
+    stages{
+        stage('build app') {
             steps {
                 script {
-                    gv = load "script.groovy"
-                }
-            }
-        }
-        stage("build jar") {
-            steps {
-                script {
-                    echo "building jar"
-                    //gv.buildJar()
+                    echo "building application jar..."
+                    buildJar()
                 }
             }
         }
         stage("build image") {
             steps {
                 script {
-                    echo "building image"
-                    //gv.buildImage()
+                    echo "building docker image..."
+                    buildImage(env.IMAGE_NAME)
+                    dockerLogin()
+                    dockerPush(env.IMAGE_NAME)
+
                 }
             }
         }
-        stage("deploy") {
+       stage('deploy') {
             steps {
                 script {
-                    def dockerCmd = 'docker run -p 3081:3081 -d obiwan6123/demo-test:1.0'
-                    sshagent(['ec2-server-key']) {
-                        sh "ssh -o StrictHostKeyChecking=no ec2-user@54.84.54.8 ${dockerCmd}"
-                    }
+                   echo 'deploying docker image to EC2...'
+
+                   def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
+                   def ec2Instance = "ec2-user@35.180.251.121"
+
+                   sshagent(['ec2-server-key']) {
+                       sh "scp -o StrictHostKeyChecking=no server-cmds.sh ${ec2Instance}:/home/ec2-user"
+                       sh "scp -o StrictHostKeyChecking=no docker-compose.yaml ${ec2Instance}:/home/ec2-user"
+                       sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} ${shellCmd}"
+                   }
                 }
             }
         }
-    }   
+    }
 }
+
