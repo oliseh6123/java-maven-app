@@ -29,10 +29,11 @@ pipeline {
         stage("deploy") {
             steps {
                 script {
-                    echo "deploying"
-                    //gv.deployApp()
+                    def dockerCmd = 'docker run -p 3080:3080 -d obiwan6123/demo-test:1.0'
+                    sshagent(['ec2-server-key']) {
+                        sh "ssh -o StrictHostKeyChecking=no ec2-user@54.84.54.8 ${}dockerCmd]"
+                    }
                 }
             }
         }
     }   
-}
