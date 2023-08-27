@@ -1,40 +1,37 @@
-def gv
-
 pipeline {
     agent any
+
+    parameters {
+        choice(name: 'VERSION', choices: ['1.1.0', '1.2.0', '1.3.0'], description: '')
+        booleanParam(name: 'executeTests', defaultValue: true, description: '')
+    }
     stages {
-        stage("init") {
+
+        stage ("build") {
+
             steps {
-                script {
-                    gv = load "script.groovy"
+                echo 'building the application...'
+            }
+
+        }
+
+        stage ("test") {
+            
+            when{
+                expression{
+                    params.executeTests
                 }
             }
-        }
-        stage("build jar") {
             steps {
-                script {
-                    echo "building jar"
-                    //gv.buildJar()
-                }
+                echo 'testing the application...'
             }
         }
-        stage("build image") {
+
+        stage ("deploy") {
             steps {
-                script {
-                    echo "building image"
-                    //gv.buildImage()
-                }
+                echo 'deploying the application...'
+                echo "deploying version ${params.version}..."
             }
         }
-        stage("deploy") {
-            steps {
-                script {
-                    def dockerCmd = 'docker run -p 3081:3081 -d obiwan6123/demo-test:1.0'
-                    sshagent(['ec2-server-key']) {
-                        sh "ssh -o StrictHostKeyChecking=no ec2-user@54.84.54.8 ${dockerCmd}"
-                    }
-                }
-            }
-        }
-    }   
+    }
 }
